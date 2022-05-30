@@ -99,7 +99,7 @@ def getMaterial(material_name, material_default_color=(0.125, 0.125, 0.125, 1)):
     
     return material
     
-def parse_darts(darts,dim,id_to_pos,arcs, DART_radius=0.01):
+def parse_darts(darts,dim,id_to_pos,arcs, DART_radius=0.01, scale=1):
     
     node_material = getMaterial(
         material_name="NodeMaterial",
@@ -118,9 +118,9 @@ def parse_darts(darts,dim,id_to_pos,arcs, DART_radius=0.01):
         # extract information
         vertex_position = dart['position']
         dart_position = (
-            dart['normal']['x'],
-            dart['normal']['y'],
-            dart['normal']['z'],
+            scale*dart['normal']['x'],
+            scale*dart['normal']['y'],
+            scale*dart['normal']['z'],
             )
         alphas = dart['alphas']
         
@@ -133,8 +133,8 @@ def parse_darts(darts,dim,id_to_pos,arcs, DART_radius=0.01):
         bpy.ops.mesh.primitive_uv_sphere_add(
             location=dart_position,
             radius=DART_radius,
-            # segments = 8,
-            # ring_count = 6,
+            segments = 64,
+            ring_count = 32,
             )
         sphere_creation += time.perf_counter() - sphere_time
         
@@ -231,8 +231,10 @@ def main():
     arcs=[[] for _ in range(dim+1)]
     
     batch_size = 250
+    batch = 0
+    darts_found = 0
     
-    for batch in range(math.ceil(nbDarts / batch_size)):
+    while darts_found < nbDarts:
         start_loading = time.perf_counter()
         darts=[]
         try:
@@ -249,7 +251,11 @@ def main():
             ShowMessageBox("Error while parsing data received from Jerboa","Error", 'ERROR')
             
         parse_darts(darts,dim,id_to_pos,arcs)
-        print("parsing time for batch {} : {:.4f}s.".format(batch,time.perf_counter()-start_loading))    
+        print("parsing time for batch {} : {:.4f}s.".format(batch,time.perf_counter()-start_loading))
+        
+        # update values
+        batch += 1
+        darts_found += len(darts)
     
     parse_arcs(arcs,dim,id_to_pos)
         
