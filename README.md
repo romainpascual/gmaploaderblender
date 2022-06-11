@@ -12,8 +12,9 @@ Use `startnet` in a Jerboa console to start the server. Then run the script from
 
 ## Example of results
 
-![A 3-G-map](example.stl "A 3-G-map")
 ![Example of rendering](example.png "Example of rendering")
+
+See the [3D version](example.stl).
 
 ## License
 
