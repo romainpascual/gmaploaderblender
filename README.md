@@ -18,7 +18,7 @@ See the [3D version](example.stl).
 
 ## License
 
-Licensed under the MIT licence.
+Licensed under the [MIT licence](LICENSE).
 
 ## Project status
 
