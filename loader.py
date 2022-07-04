@@ -78,14 +78,14 @@ def change_focus_collection(collection_name):
 
     if target_coll:
         bpy.context.view_layer.active_layer_collection = target_coll
-        return True
+        return target_coll
     else:
     
         target_coll = bpy.data.collections.new(target_coll_name)
         bpy.context.scene.collection.children.link(target_coll)
         target_coll = recurLayerCollection(master_coll, target_coll_name)
         bpy.context.view_layer.active_layer_collection = target_coll
-        return False
+        return target_coll
     
 def getMaterial(material_name, material_default_color=(0.125, 0.125, 0.125, 1)):
     material = bpy.data.materials.get(material_name)
@@ -266,6 +266,94 @@ def test():
         location=(-1,-1,-1),
         radius=0.1,
         )
+
+def create_mesh(object_name, mesh_name, vertices, edges):
     
+    # Create mesh
+    mesh = bpy.data.meshes.new(mesh_name)
+    mesh.from_pydata(vertices, edges, [])
+    mesh.update()
+    
+    # Create object
+    object = bpy.data.objects.new(object_name, mesh)
+    return object
+    
+
+def parse_darts_to_mesh(darts,dim,vertices,id_to_vertices,arcs,scale=1):
+    dart_parsing = time.perf_counter()
+    
+    for dart in darts:    
+        
+        # extract information
+        vertex_position = dart['position']
+        dart_position = (
+            scale*dart['normal']['x'],
+            scale*dart['normal']['y'],
+            scale*dart['normal']['z'],
+            )
+        alphas = dart['alphas']
+        
+        # store position
+        dart_id = dart['id']
+        id_to_vertices[dart_id]=len(vertices)
+        vertices.append(dart_position)
+                
+        # extract arcs
+        alphas = dart['alphas']
+        for d in range(dim+1):
+            neighbor_id = alphas[d]
+            if neighbor_id < dart_id:
+                arcs[d].append((
+                id_to_vertices[dart_id],
+                id_to_vertices[neighbor_id]
+            ))
+                
+    print("dart parsing time: {:.4f}s".format(time.perf_counter()-dart_parsing))
+    
+def parse_Jerboa():
+    dim, nbDarts = getInfo()
+    vertices=[]
+    id_to_vertices = dict()
+    arcs=[[] for _ in range(dim+1)]
+    
+    batch_size = 250
+    batch = 0
+    darts_found = 0
+    
+    while darts_found < nbDarts:
+        start_loading = time.perf_counter()
+        darts=[]
+        try:
+            
+            body = requests.get("http://localhost:8080/modeler/gmap/0/darts/"
+                + str(batch_size*batch)
+                + "/"
+                +  str(batch_size*(batch+1))
+            )
+            darts = (body.json())['result']   
+            print("Parsing for batch {} suceeded".format(batch))
+        except:
+            print("Error")
+            ShowMessageBox("Error while parsing data received from Jerboa","Error", 'ERROR')
+            
+        parse_darts_to_mesh(darts,dim,vertices,id_to_vertices,arcs)
+        print("parsing time for batch {} : {:.4f}s.".format(batch,time.perf_counter()-start_loading))
+        
+        # update values
+        batch += 1
+        darts_found += len(darts)
+    
+    
+    collection = bpy.data.collections.new("Gmap")
+    bpy.context.scene.collection.children.link(collection)
+    
+    dart_set = create_mesh("darts", "mesh", vertices, [])
+    collection.objects.link(dart_set)
+    
+    for d in range(dim+1):
+        alphad = create_mesh("alpha"+str(d), "mesh", vertices, arcs[d])
+        collection.objects.link(alphad)
+
 if __name__== "__main__":
     main()
+    #parse_Jerboa()
