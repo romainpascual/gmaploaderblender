@@ -355,5 +355,5 @@ def parse_Jerboa():
         collection.objects.link(alphad)
 
 if __name__== "__main__":
-    main()
-    #parse_Jerboa()
+    #main()
+    parse_Jerboa()
